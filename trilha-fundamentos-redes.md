@@ -4,7 +4,7 @@ Esta e a trilha completa de Fundamentos de Redes mapeada a partir da plataforma.
 
 ## Situacao Atual
 
-- Curso atual: `036 - Como Estudar Redes do Zero`
+- Curso atual: `Como Estudar Redes do Zero`
 - Progresso informado: `25%`
 - Status: em andamento
 

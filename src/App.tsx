@@ -42,10 +42,10 @@ type DayPlan = {
 const courses: Course[] = [
   {
     id: "036",
-    title: "036 - Como Estudar Redes do Zero",
+    title: "Como Estudar Redes do Zero",
     block: "Base obrigatoria",
     priority: 1,
-    image: "/course-images/036-como-estudar-redes-do-zero.png",
+    image: "/course-images/como-estudar-redes-do-zero.png",
     goal: "Fechar metodo de estudo, OSI/TCP-IP, IP e Netmask.",
     lessons: [
       { id: "036-01", name: "01 - CONVERSA INICIAL", status: "concluido" },
@@ -90,7 +90,7 @@ const courses: Course[] = [
     title: "Curso de MikroTik Gratis",
     block: "Laboratorios basicos",
     priority: 2,
-    image: "/course-images/como-estudar-redes-do-zero.png",
+    image: "/course-images/036-como-estudar-redes-do-zero.png",
     goal: "Reforçar primeiro acesso, reset, topologia e labs.",
     lessons: [
       { id: "mg-01", name: "APOSTILA DO CURSO" },

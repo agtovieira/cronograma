@@ -60,7 +60,7 @@ Aplicacao pronta para deploy como app Node/Vite ou via Dockerfile.
 - `fotos/1.png`: tela de trilhas com Consultor de Redes MikroTik, Fundamentos em Redes e Mikrotik na Pratica.
 - `fotos/2.png`: tela de trilhas com Seguranca e Monitoramento, Provedores e ISPs e Infraestrutura e Virtualizacao.
 - `fotos/3.png`: trilha Carreira de Roteamento.
-- `fotos/4.png`: curso 036 - Como Estudar Redes do Zero.
+- `fotos/4.png`: curso Como Estudar Redes do Zero.
 - `fotos/5.png`: curso 038 - Laboratorio Virtual do Zero.
 - `fotos/6.png`: curso 040 - Laboratorio Virtual Avancado.
 
