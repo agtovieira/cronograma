@@ -13,7 +13,6 @@ import {
   ListChecks,
   LockKeyhole,
   Network,
-  Route,
   Search,
   Shield,
   Target,
@@ -47,6 +46,21 @@ type DayPlan = {
 type LessonWithCourse = Lesson & {
   course: string;
   block: string;
+};
+
+type Certification = {
+  id: string;
+  name: string;
+  vendor: string;
+  level: string;
+  summary: string;
+  materials: Array<{
+    href: string;
+    label: string;
+    kind: string;
+  }>;
+  facts: string[];
+  focus: string[];
 };
 
 const courses: Course[] = [
@@ -280,6 +294,46 @@ const statusLabel: Record<Status, string> = {
 
 const weekdayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
+const certifications: Certification[] = [
+  {
+    id: "mtcna",
+    name: "MTCNA",
+    vendor: "MikroTik",
+    level: "Base de redes e RouterOS",
+    summary: "Certificação inicial para validar fundamentos de rede, configuração básica no RouterOS, serviços IP, firewall, wireless e troubleshooting.",
+    materials: [
+      {
+        href: "/MTCNA.pdf",
+        label: "Material MTCNA",
+        kind: "PDF"
+      }
+    ],
+    facts: ["25 questões", "60 minutos", "60% aprovação", "Validade de 3 anos"],
+    focus: ["TCP/IP", "Bridge e switching", "Roteamento básico", "Firewall e NAT", "DHCP e DNS", "RouterOS"]
+  },
+  {
+    id: "hcia-datacom",
+    name: "HCIA-Datacom V2.0",
+    vendor: "Huawei",
+    level: "Especialização Datacom",
+    summary: "Material de treinamento para evoluir em redes corporativas Huawei, arquitetura Datacom, roteamento, switching, serviços e operação.",
+    materials: [
+      {
+        href: "/HCIA-Datacom-V2.0-Training-Material.pdf",
+        label: "Training Material",
+        kind: "PDF"
+      },
+      {
+        href: "/HCIA-Datacom-V2.0-Lab-Guide-eNSP-Pro.pdf",
+        label: "Lab Guide eNSP Pro",
+        kind: "Laboratório"
+      }
+    ],
+    facts: ["Huawei", "Datacom V2.0", "Material oficial", "Especialização"],
+    focus: ["Fundamentos IP", "Ethernet", "VLAN", "Roteamento", "Segurança", "Operação de rede"]
+  }
+];
+
 function getInitialDone() {
   const initial: Record<string, boolean> = {};
   courses.forEach((course) => {
@@ -300,6 +354,7 @@ function App() {
   const [done, setDone] = useState<Record<string, boolean>>(getInitialDone);
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState("todos");
+  const [activeCertification, setActiveCertification] = useState(certifications[0].id);
 
   const allLessons: LessonWithCourse[] = courses.flatMap((course) =>
     course.lessons.map((lesson) => ({
@@ -315,6 +370,7 @@ function App() {
   const todayPlan = weeklyPlan.find((plan) => plan.day === todayName) ?? weeklyPlan[0];
   const nextLessons = allLessons.filter((lesson) => !done[lesson.id]).slice(0, 5);
   const activeCourse = courses.find((course) => course.lessons.some((lesson) => !done[lesson.id])) ?? courses[0];
+  const selectedCertification = certifications.find((certification) => certification.id === activeCertification) ?? certifications[0];
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -344,7 +400,7 @@ function App() {
           <span>CR</span>
           <div>
             <strong>Cronograma</strong>
-            <small>Redes & MTCNA</small>
+            <small>Redes & Certificações</small>
           </div>
         </div>
 
@@ -361,9 +417,9 @@ function App() {
             <BookOpen size={18} />
             Cursos
           </a>
-          <a href="#mtcna">
+          <a href="#certificacoes">
             <Trophy size={18} />
-            MTCNA
+            Certificações
           </a>
         </nav>
 
@@ -378,13 +434,13 @@ function App() {
           <div>
             <span className="eyebrow">Cronograma Nodeia</span>
             <h1>Plano de estudos em redes</h1>
-            <p>Fundamentos primeiro, MikroTik em seguida, laboratório e MTCNA como meta de certificação.</p>
+            <p>Fundamentos primeiro, MikroTik em seguida, laboratório e certificações como meta de evolução técnica.</p>
           </div>
 
           <div className="header-actions">
-            <a className="quiet-link" href="/MTCNA.pdf" target="_blank" rel="noreferrer">
+            <a className="quiet-link" href="#certificacoes">
               <FileText size={18} />
-              PDF MTCNA
+              Certificações
             </a>
             <span className="domain-box">
               <Network size={18} />
@@ -441,18 +497,71 @@ function App() {
             </div>
           </article>
 
-          <article className="cert-panel" id="mtcna">
-            <PanelTitle icon={<Shield />} title="Meta MTCNA" description="Certificação básica MikroTik e porta de entrada para trilhas avançadas." />
-            <div className="cert-facts">
-              <span>25 questões</span>
-              <span>60 minutos</span>
-              <span>60% aprovação</span>
-              <span>3 anos</span>
+        </section>
+
+        <section className="certifications-section" id="certificacoes">
+          <div className="section-toolbar">
+            <div>
+              <span className="eyebrow">Materiais e metas</span>
+              <h2>Certificações</h2>
+              <p>Área para acompanhar as certificações que vão guiar a trilha: primeiro MTCNA, depois especialização Huawei HCIA-Datacom.</p>
             </div>
-            <a className="primary-link" href="/MTCNA.pdf" target="_blank" rel="noreferrer">
-              <FileText size={18} />
-              Abrir material
-            </a>
+          </div>
+
+          <div className="cert-tabs" role="tablist" aria-label="Certificações">
+            {certifications.map((certification) => (
+              <button
+                className={certification.id === activeCertification ? "active" : ""}
+                key={certification.id}
+                onClick={() => setActiveCertification(certification.id)}
+                role="tab"
+                type="button"
+              >
+                <Trophy size={17} />
+                <span>{certification.name}</span>
+              </button>
+            ))}
+          </div>
+
+          <article className="cert-detail">
+            <div className="cert-summary">
+              <div className="cert-kicker">
+                <span>{selectedCertification.vendor}</span>
+                <strong>{selectedCertification.level}</strong>
+              </div>
+              <h3>{selectedCertification.name}</h3>
+              <p>{selectedCertification.summary}</p>
+
+              <div className="cert-facts">
+                {selectedCertification.facts.map((fact) => (
+                  <span key={fact}>{fact}</span>
+                ))}
+              </div>
+
+              <div className="material-list">
+                {selectedCertification.materials.map((material) => (
+                  <a className="material-link" href={material.href} key={material.href} target="_blank" rel="noreferrer">
+                    <FileText size={18} />
+                    <span>
+                      {material.label}
+                      <small>{material.kind}</small>
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div className="cert-focus">
+              <PanelTitle icon={<Shield />} title="Pontos de estudo" description="Assuntos que devem orientar revisão, laboratório e simulados." />
+              <div className="focus-grid">
+                {selectedCertification.focus.map((item) => (
+                  <div className="focus-item" key={item}>
+                    <CheckCircle2 size={17} />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </article>
         </section>
 
