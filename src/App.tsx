@@ -13,6 +13,7 @@ import {
   ListChecks,
   LockKeyhole,
   Network,
+  PencilLine,
   Search,
   Shield,
   Target,
@@ -294,6 +295,13 @@ const statusLabel: Record<Status, string> = {
 
 const weekdayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
+const feynmanPrompts = [
+  "Explique o tema como se estivesse ensinando alguém que nunca viu redes.",
+  "Quais foram os pontos em que você travou ou percebeu que ainda não sabe explicar?",
+  "Qual exemplo prático, comando ou cenário real prova que você entendeu esse conteúdo?",
+  "Qual pergunta você faria para testar se outra pessoa também entendeu?"
+];
+
 const certifications: Certification[] = [
   {
     id: "mtcna",
@@ -355,6 +363,14 @@ function App() {
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState("todos");
   const [activeCertification, setActiveCertification] = useState(certifications[0].id);
+  const [feynmanNotes, setFeynmanNotes] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem("cronograma-redes-feynman");
+      return saved ? (JSON.parse(saved) as Record<string, string>) : {};
+    } catch {
+      return {};
+    }
+  });
 
   const allLessons: LessonWithCourse[] = courses.flatMap((course) =>
     course.lessons.map((lesson) => ({
@@ -389,6 +405,14 @@ function App() {
     setDone((current) => {
       const next = { ...current, [id]: !current[id] };
       localStorage.setItem("cronograma-redes-status", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function updateFeynmanNote(courseId: string, value: string) {
+    setFeynmanNotes((current) => {
+      const next = { ...current, [courseId]: value };
+      localStorage.setItem("cronograma-redes-feynman", JSON.stringify(next));
       return next;
     });
   }
@@ -630,6 +654,27 @@ function App() {
                         </button>
                       );
                     })}
+                  </div>
+
+                  <div className="feynman-box">
+                    <div className="feynman-header">
+                      <span>
+                        <PencilLine size={17} />
+                        Método Feynman
+                      </span>
+                      <small>{courseProgress === 100 ? "Avaliação final" : "Use ao concluir o curso"}</small>
+                    </div>
+                    <div className="feynman-prompts">
+                      {feynmanPrompts.map((prompt) => (
+                        <p key={prompt}>{prompt}</p>
+                      ))}
+                    </div>
+                    <textarea
+                      aria-label={`Resposta Feynman para ${course.title}`}
+                      onChange={(event) => updateFeynmanNote(course.id, event.target.value)}
+                      placeholder="Escreva sua explicação com suas palavras. Se ficar difícil explicar, marque o curso para revisar."
+                      value={feynmanNotes[course.id] ?? ""}
+                    />
                   </div>
                 </article>
               );

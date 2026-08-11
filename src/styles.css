@@ -27,7 +27,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -617,7 +618,7 @@ p {
 
 .course-card {
   display: grid;
-  grid-template-columns: 172px minmax(0, 1fr) minmax(360px, 0.85fr);
+  grid-template-columns: 172px minmax(0, 0.92fr) minmax(330px, 0.72fr) minmax(330px, 0.9fr);
   gap: 18px;
   padding: 14px;
 }
@@ -784,6 +785,82 @@ p {
   grid-template-columns: auto minmax(0, 1fr);
 }
 
+.feynman-box {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #e1e7e4;
+  border-radius: 8px;
+  background: #fbfcfc;
+}
+
+.feynman-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.feynman-header span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #111827;
+  font-weight: 900;
+}
+
+.feynman-header svg {
+  color: #1d4ed8;
+}
+
+.feynman-header small {
+  color: #64706a;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.feynman-prompts {
+  display: grid;
+  gap: 6px;
+}
+
+.feynman-prompts p {
+  position: relative;
+  padding-left: 14px;
+  color: #3c4742;
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.feynman-prompts p::before {
+  position: absolute;
+  top: 0.55em;
+  left: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #10b981;
+  content: "";
+}
+
+.feynman-box textarea {
+  width: 100%;
+  min-height: 132px;
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid #d7dee2;
+  border-radius: 8px;
+  outline: 0;
+  background: #ffffff;
+  color: #17211c;
+  line-height: 1.5;
+}
+
+.feynman-box textarea:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.14);
+}
+
 @media (max-width: 1280px) {
   .overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -797,9 +874,14 @@ p {
     grid-template-columns: 150px minmax(0, 1fr);
   }
 
-  .lesson-list {
+  .lesson-list,
+  .feynman-box {
     grid-column: 1 / -1;
     max-height: 220px;
+  }
+
+  .feynman-box {
+    max-height: none;
   }
 }
 

@@ -77,6 +77,15 @@ Nao grave a senha real no GitHub. Configure somente nas variaveis de ambiente da
 
 Antes de aprofundar em MikroTik, priorizar dominio de IP, mascara, gateway, DNS, DHCP, NAT, TCP, UDP, ICMP, switch, roteador, firewall e roteamento basico.
 
+## Metodo Feynman
+
+Ao concluir cada curso, usar o bloco "Metodo Feynman" no painel para escrever:
+
+- Explicacao do conteudo com suas proprias palavras.
+- Pontos que ainda nao consegue explicar bem.
+- Exemplo pratico, comando ou cenario real que comprova entendimento.
+- Pergunta que usaria para testar outra pessoa.
+
 ## Meta de Certificacao
 
 Foco de medio prazo:
