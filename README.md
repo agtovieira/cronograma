@@ -16,6 +16,7 @@ Sair da dificuldade no basico de redes e construir uma trilha de estudo progress
 
 - `src/`: aplicacao web do cronograma.
 - `public/course-images/`: logos dos cursos usadas na interface.
+- `public/MTCNA.pdf`: material de referencia para a certificacao MTCNA.
 - `cronograma-estudos.md`: plano semanal e ordem recomendada de estudo.
 - `trilha-fundamentos-redes.md`: checklist completo da trilha Fundamentos de Redes.
 - `inventario-cursos.csv`: lista para organizar os 88 cursos/aulas encontrados na plataforma.
@@ -66,3 +67,16 @@ Aplicacao pronta para deploy como app Node/Vite ou via Dockerfile.
 ## Regra principal
 
 Antes de aprofundar em MikroTik, priorizar dominio de IP, mascara, gateway, DNS, DHCP, NAT, TCP, UDP, ICMP, switch, roteador, firewall e roteamento basico.
+
+## Meta de Certificacao
+
+Foco de medio prazo: MTCNA - MikroTik Certified Network Associate.
+
+Dados oficiais da MikroTik:
+
+- Certificacao basica da trilha MikroTik.
+- Pre-requisito para certificacoes avancadas.
+- Prova com 25 questoes.
+- Tempo de prova: 60 minutos.
+- Aprovacao: 60%.
+- Validade: 3 anos.

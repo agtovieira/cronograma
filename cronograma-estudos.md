@@ -6,6 +6,8 @@ Voce comecou pelo curso "Como Estudar Redes do Zero". A decisao correta e usar e
 
 Mesmo ja tendo conhecimento basico de MikroTik, o foco dos primeiros ciclos sera entender bem o que acontece na rede. O MikroTik entra depois como ferramenta para praticar os conceitos.
 
+Meta de medio prazo: tirar a certificacao MTCNA - MikroTik Certified Network Associate. O arquivo `MTCNA.pdf` fica como material de referencia do projeto.
+
 ## Prioridade das Trilhas
 
 ### 1. Fundamentos em Redes

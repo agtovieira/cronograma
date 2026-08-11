@@ -383,6 +383,28 @@ function App() {
         </div>
       </section>
 
+      <section className="cert-panel">
+        <div className="cert-copy">
+          <div className="section-title">
+            <Shield />
+            <div>
+              <h2>Meta de certificação MTCNA</h2>
+              <p>MikroTik Certified Network Associate é a certificação básica e a porta de entrada para as trilhas avançadas.</p>
+            </div>
+          </div>
+          <div className="cert-facts">
+            <span>25 questões</span>
+            <span>60 minutos</span>
+            <span>60% para aprovação</span>
+            <span>Validade de 3 anos</span>
+          </div>
+        </div>
+        <a className="pdf-link" href="/MTCNA.pdf" target="_blank" rel="noreferrer">
+          <BookOpen size={19} />
+          Abrir PDF MTCNA
+        </a>
+      </section>
+
       <section className="courses-section">
         <div className="courses-header">
           <div>
