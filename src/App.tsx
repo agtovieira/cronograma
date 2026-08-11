@@ -1,18 +1,23 @@
 import { type ReactNode, useMemo, useState } from "react";
 import {
+  BarChart3,
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ChevronRight,
   Circle,
   Clock3,
+  FileText,
+  Filter,
   GraduationCap,
   ListChecks,
+  LockKeyhole,
   Network,
   Route,
   Search,
-  Server,
   Shield,
-  Wifi
+  Target,
+  Trophy
 } from "lucide-react";
 
 type Status = "nao_iniciado" | "estudando" | "concluido" | "revisar";
@@ -39,14 +44,19 @@ type DayPlan = {
   blocks: string[];
 };
 
+type LessonWithCourse = Lesson & {
+  course: string;
+  block: string;
+};
+
 const courses: Course[] = [
   {
     id: "036",
     title: "Como Estudar Redes do Zero",
-    block: "Base obrigatoria",
+    block: "Base obrigatória",
     priority: 1,
     image: "/course-images/como-estudar-redes-do-zero.png",
-    goal: "Fechar metodo de estudo, OSI/TCP-IP, IP e Netmask.",
+    goal: "Fechar método de estudo, OSI/TCP-IP, IP e Netmask.",
     lessons: [
       { id: "036-01", name: "01 - CONVERSA INICIAL", status: "concluido" },
       { id: "036-02", name: "02 - POR ONDE COMEÇAR", status: "concluido" },
@@ -60,7 +70,7 @@ const courses: Course[] = [
   },
   {
     id: "redes-gratis-2",
-    title: "Curso de Redes Gratis 2.0",
+    title: "Curso de Redes Grátis 2.0",
     block: "MikroTik inicial",
     priority: 2,
     image: "/course-images/curso-de-redes-gratis-2.png",
@@ -87,11 +97,11 @@ const courses: Course[] = [
   },
   {
     id: "mikrotik-gratis",
-    title: "Curso de MikroTik Gratis",
-    block: "Laboratorios basicos",
+    title: "Curso de MikroTik Grátis",
+    block: "Laboratórios básicos",
     priority: 2,
     image: "/course-images/036-como-estudar-redes-do-zero.png",
-    goal: "Reforçar primeiro acesso, reset, topologia e labs.",
+    goal: "Reforçar primeiro acesso, reset, topologia e laboratórios.",
     lessons: [
       { id: "mg-01", name: "APOSTILA DO CURSO" },
       { id: "mg-02", name: "01 - APRESENTAÇÃO INICIAL" },
@@ -113,7 +123,7 @@ const courses: Course[] = [
   {
     id: "mikrotik-zero",
     title: "Curso MikroTik do Zero",
-    block: "MikroTik pratico",
+    block: "MikroTik prático",
     priority: 2,
     image: "/course-images/mikrotik-do-zero.png",
     goal: "Configuração inicial, firewall, NAT, failover, VLAN, IPv6, VPN e Wi-Fi.",
@@ -131,11 +141,11 @@ const courses: Course[] = [
   },
   {
     id: "lab-zero",
-    title: "038 - Laboratorio Virtual do Zero",
+    title: "038 - Laboratório Virtual do Zero",
     block: "Infraestrutura",
     priority: 3,
     image: "/course-images/lab-virtual-do-zero.png",
-    goal: "Criar ambiente de laboratorio para praticar com segurança.",
+    goal: "Criar ambiente de laboratório para praticar com segurança.",
     lessons: [
       { id: "lvz-01", name: "DOWNLOAD DO VMWARE PLAYER" },
       { id: "lvz-02", name: "01 - CONVERSA INICIAL" },
@@ -144,7 +154,7 @@ const courses: Course[] = [
       { id: "lvz-05", name: "04 - INSTALANDO O EVE-NG EM UMA VM" },
       { id: "lvz-06", name: "05 - ADICIONANDO IMAGENS NO EVE-NG" },
       { id: "lvz-07", name: "06 - INSTALANDO VM DO PNETLAB" },
-      { id: "lvz-08", name: "07 - LABORATORIOS AVANÇADOS" }
+      { id: "lvz-08", name: "07 - LABORATÓRIOS AVANÇADOS" }
     ]
   },
   {
@@ -153,7 +163,7 @@ const courses: Course[] = [
     block: "Roteamento",
     priority: 3,
     image: "/course-images/roteamentos-e-vlans.png",
-    goal: "Entrar em VLAN, roteamento estatico e OSPF depois da base.",
+    goal: "Entrar em VLAN, roteamento estático e OSPF depois da base.",
     lessons: [
       { id: "rv-01", name: "APOSTILA AULA 1" },
       { id: "rv-02", name: "01 - CONFIGURAÇÃO INICIAL DE MIKROTIK, HUAWEI E CISCO" },
@@ -162,7 +172,7 @@ const courses: Course[] = [
       { id: "rv-05", name: "APOSTILA AULA 3" },
       { id: "rv-06", name: "03 - ROTEAMENTO ESTÁTICO" },
       { id: "rv-07", name: "APOSTILA AULA 4" },
-      { id: "rv-08", name: "04 - ROTEAMENTO DINAMICO COM OSPF" }
+      { id: "rv-08", name: "04 - ROTEAMENTO DINÂMICO COM OSPF" }
     ]
   },
   {
@@ -195,8 +205,8 @@ const courses: Course[] = [
   },
   {
     id: "lab-avancado",
-    title: "040 - Laboratorio Virtual Avancado",
-    block: "Avancado",
+    title: "040 - Laboratório Virtual Avançado",
+    block: "Avançado",
     priority: 4,
     image: "/course-images/lab-virtual-avancado.png",
     goal: "Fazer depois de base, MikroTik inicial, VLAN e roteamento.",
@@ -270,29 +280,41 @@ const statusLabel: Record<Status, string> = {
 
 const weekdayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
-function App() {
-  const [done, setDone] = useState<Record<string, boolean>>(() => {
-    const saved = localStorage.getItem("cronograma-redes-status");
-    if (saved) return JSON.parse(saved) as Record<string, boolean>;
-
-    const initial: Record<string, boolean> = {};
-    courses.forEach((course) => {
-      course.lessons.forEach((lesson) => {
-        initial[lesson.id] = lesson.status === "concluido";
-      });
+function getInitialDone() {
+  const initial: Record<string, boolean> = {};
+  courses.forEach((course) => {
+    course.lessons.forEach((lesson) => {
+      initial[lesson.id] = lesson.status === "concluido";
     });
-    return initial;
   });
+
+  try {
+    const saved = localStorage.getItem("cronograma-redes-status");
+    return saved ? ({ ...initial, ...JSON.parse(saved) } as Record<string, boolean>) : initial;
+  } catch {
+    return initial;
+  }
+}
+
+function App() {
+  const [done, setDone] = useState<Record<string, boolean>>(getInitialDone);
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState("todos");
 
-  const allLessons = courses.flatMap((course) => course.lessons.map((lesson) => ({ ...lesson, course: course.title })));
+  const allLessons: LessonWithCourse[] = courses.flatMap((course) =>
+    course.lessons.map((lesson) => ({
+      ...lesson,
+      course: course.title,
+      block: course.block
+    }))
+  );
+
   const completed = allLessons.filter((lesson) => done[lesson.id]).length;
   const progress = Math.round((completed / allLessons.length) * 100);
-
   const todayName = weekdayMap[new Date().getDay()];
   const todayPlan = weeklyPlan.find((plan) => plan.day === todayName) ?? weeklyPlan[0];
-  const nextLessons = allLessons.filter((lesson) => !done[lesson.id]).slice(0, 4);
+  const nextLessons = allLessons.filter((lesson) => !done[lesson.id]).slice(0, 5);
+  const activeCourse = courses.find((course) => course.lessons.some((lesson) => !done[lesson.id])) ?? courses[0];
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -316,136 +338,177 @@ function App() {
   }
 
   return (
-    <main className="app-shell">
-      <section className="topbar">
-        <div>
-          <span className="eyebrow">Cronograma Nodeia</span>
-          <h1>Cronograma de Estudos de Redes</h1>
-          <p>Foco nos fundamentos primeiro, depois MikroTik, laboratório, VLAN, roteamento e IPv6.</p>
-        </div>
-        <div className="domain-box">
-          <Network size={18} />
-          <span>cronograma.nodeia.tech</span>
-        </div>
-      </section>
-
-      <section className="dashboard-grid">
-        <Metric icon={<GraduationCap />} label="Aulas mapeadas" value={allLessons.length.toString()} helper="Trilha Fundamentos de Redes" />
-        <Metric icon={<CheckCircle2 />} label="Progresso geral" value={`${progress}%`} helper={`${completed} de ${allLessons.length} concluídas`} />
-        <Metric icon={<Clock3 />} label="Foco de hoje" value={todayPlan.day} helper={todayPlan.focus} />
-        <Metric icon={<Route />} label="Prioridade atual" value="Base" helper="OSI/TCP-IP, IP e Netmask" />
-      </section>
-
-      <section className="workbench">
-        <div className="panel today-panel">
-          <div className="section-title">
-            <CalendarDays />
-            <div>
-              <h2>Hoje</h2>
-              <p>{todayPlan.focus}</p>
-            </div>
-          </div>
-          <div className="timeline">
-            {todayPlan.blocks.map((block) => (
-              <div className="timeline-row" key={block}>
-                <span />
-                <p>{block}</p>
-              </div>
-            ))}
-          </div>
-          <h3>Próximas aulas</h3>
-          <div className="next-list">
-            {nextLessons.map((lesson) => (
-              <button className="lesson-button compact" key={lesson.id} onClick={() => toggleLesson(lesson.id)}>
-                <Circle size={17} />
-                <span>{lesson.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="panel gate-panel">
-          <div className="section-title">
-            <ListChecks />
-            <div>
-              <h2>Regra para avançar</h2>
-              <p>Antes de acelerar no MikroTik, explique estes pontos com suas palavras.</p>
-            </div>
-          </div>
-          <div className="gate-grid">
-            {fundamentalsGate.map((item) => (
-              <div className="gate-item" key={item}>
-                <CheckCircle2 size={18} />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="cert-panel">
-        <div className="cert-copy">
-          <div className="section-title">
-            <Shield />
-            <div>
-              <h2>Meta de certificação MTCNA</h2>
-              <p>MikroTik Certified Network Associate é a certificação básica e a porta de entrada para as trilhas avançadas.</p>
-            </div>
-          </div>
-          <div className="cert-facts">
-            <span>25 questões</span>
-            <span>60 minutos</span>
-            <span>60% para aprovação</span>
-            <span>Validade de 3 anos</span>
-          </div>
-        </div>
-        <a className="pdf-link" href="/MTCNA.pdf" target="_blank" rel="noreferrer">
-          <BookOpen size={19} />
-          Abrir PDF MTCNA
-        </a>
-      </section>
-
-      <section className="courses-section">
-        <div className="courses-header">
+    <div className="workspace">
+      <aside className="sidebar">
+        <div className="brand">
+          <span>CR</span>
           <div>
-            <h2>Trilha Fundamentos de Redes</h2>
-            <p>Ordem prática para não se perder: base, MikroTik inicial, laboratório, roteamento e IPv6.</p>
-          </div>
-          <div className="filters">
-            <label className="search-box">
-              <Search size={18} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar aula ou curso" />
-            </label>
-            <select value={priority} onChange={(event) => setPriority(event.target.value)} aria-label="Filtrar prioridade">
-              <option value="todos">Todas</option>
-              <option value="1">Prioridade 1</option>
-              <option value="2">Prioridade 2</option>
-              <option value="3">Prioridade 3</option>
-              <option value="4">Prioridade 4</option>
-            </select>
+            <strong>Cronograma</strong>
+            <small>Redes & MTCNA</small>
           </div>
         </div>
 
-        <div className="course-grid">
-          {filteredCourses.map((course) => {
-            const courseDone = course.lessons.filter((lesson) => done[lesson.id]).length;
-            const courseProgress = Math.round((courseDone / course.lessons.length) * 100);
-            return (
-              <article className="course-card" key={course.id}>
-                <img src={course.image} alt="" />
-                <div className="course-body">
-                  <div className="course-meta">
-                    <span>{course.block}</span>
-                    <strong>Prioridade {course.priority}</strong>
+        <nav className="nav-list" aria-label="Navegação principal">
+          <a href="#visao-geral">
+            <BarChart3 size={18} />
+            Visão geral
+          </a>
+          <a href="#hoje">
+            <CalendarDays size={18} />
+            Hoje
+          </a>
+          <a href="#cursos">
+            <BookOpen size={18} />
+            Cursos
+          </a>
+          <a href="#mtcna">
+            <Trophy size={18} />
+            MTCNA
+          </a>
+        </nav>
+
+        <div className="sidebar-note">
+          <LockKeyhole size={18} />
+          <span>Acesso protegido por Basic Auth na EasyPanel.</span>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        <header className="page-header">
+          <div>
+            <span className="eyebrow">Cronograma Nodeia</span>
+            <h1>Plano de estudos em redes</h1>
+            <p>Fundamentos primeiro, MikroTik em seguida, laboratório e MTCNA como meta de certificação.</p>
+          </div>
+
+          <div className="header-actions">
+            <a className="quiet-link" href="/MTCNA.pdf" target="_blank" rel="noreferrer">
+              <FileText size={18} />
+              PDF MTCNA
+            </a>
+            <span className="domain-box">
+              <Network size={18} />
+              cronograma.nodeia.tech
+            </span>
+          </div>
+        </header>
+
+        <section className="overview-grid" id="visao-geral">
+          <Metric icon={<GraduationCap />} label="Aulas mapeadas" value={allLessons.length.toString()} helper={`${courses.length} cursos na trilha`} />
+          <Metric icon={<CheckCircle2 />} label="Progresso geral" value={`${progress}%`} helper={`${completed} de ${allLessons.length} concluídas`} />
+          <Metric icon={<Clock3 />} label="Foco de hoje" value={todayPlan.day} helper={todayPlan.focus} />
+          <Metric icon={<Target />} label="Curso atual" value={activeCourse.block} helper={activeCourse.title} />
+        </section>
+
+        <section className="operations-grid">
+          <article className="panel today-panel" id="hoje">
+            <PanelTitle icon={<CalendarDays />} title="Agenda de hoje" description={todayPlan.focus} />
+            <div className="timeline">
+              {todayPlan.blocks.map((block) => (
+                <div className="timeline-row" key={block}>
+                  <span />
+                  <p>{block}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="subhead">
+              <h3>Próximas aulas</h3>
+              <small>{nextLessons.length} pendências imediatas</small>
+            </div>
+            <div className="next-list">
+              {nextLessons.map((lesson) => (
+                <button className="lesson-button compact" key={lesson.id} onClick={() => toggleLesson(lesson.id)}>
+                  <Circle size={17} />
+                  <span>
+                    {lesson.name}
+                    <small>{lesson.course}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </article>
+
+          <article className="panel gate-panel">
+            <PanelTitle icon={<ListChecks />} title="Regra para avançar" description="Antes de acelerar no MikroTik, explique estes pontos com suas palavras." />
+            <div className="gate-grid">
+              {fundamentalsGate.map((item) => (
+                <div className="gate-item" key={item}>
+                  <CheckCircle2 size={18} />
+                  <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </article>
+
+          <article className="cert-panel" id="mtcna">
+            <PanelTitle icon={<Shield />} title="Meta MTCNA" description="Certificação básica MikroTik e porta de entrada para trilhas avançadas." />
+            <div className="cert-facts">
+              <span>25 questões</span>
+              <span>60 minutos</span>
+              <span>60% aprovação</span>
+              <span>3 anos</span>
+            </div>
+            <a className="primary-link" href="/MTCNA.pdf" target="_blank" rel="noreferrer">
+              <FileText size={18} />
+              Abrir material
+            </a>
+          </article>
+        </section>
+
+        <section className="courses-section" id="cursos">
+          <div className="section-toolbar">
+            <div>
+              <span className="eyebrow">Trilha completa</span>
+              <h2>Fundamentos de Redes</h2>
+              <p>Ordem prática para estudar sem pular a base: teoria, MikroTik inicial, laboratório, roteamento e IPv6.</p>
+            </div>
+
+            <div className="filters">
+              <label className="search-box">
+                <Search size={18} />
+                <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar aula ou curso" />
+              </label>
+              <label className="select-box">
+                <Filter size={17} />
+                <select value={priority} onChange={(event) => setPriority(event.target.value)} aria-label="Filtrar prioridade">
+                  <option value="todos">Todas</option>
+                  <option value="1">Prioridade 1</option>
+                  <option value="2">Prioridade 2</option>
+                  <option value="3">Prioridade 3</option>
+                  <option value="4">Prioridade 4</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="course-list">
+            {filteredCourses.map((course) => {
+              const courseDone = course.lessons.filter((lesson) => done[lesson.id]).length;
+              const courseProgress = Math.round((courseDone / course.lessons.length) * 100);
+              return (
+                <article className="course-card" key={course.id}>
+                  <div className="course-image">
+                    <img src={course.image} alt="" />
                   </div>
-                  <h3>{course.title}</h3>
-                  <p>{course.goal}</p>
-                  <div className="progress-row">
-                    <div className="progress-track">
-                      <span style={{ width: `${courseProgress}%` }} />
+
+                  <div className="course-content">
+                    <div className="course-topline">
+                      <span className={`priority-badge p${course.priority}`}>P{course.priority}</span>
+                      <span>{course.block}</span>
                     </div>
-                    <b>{courseProgress}%</b>
+                    <h3>{course.title}</h3>
+                    <p>{course.goal}</p>
+
+                    <div className="course-progress">
+                      <div className="progress-track">
+                        <span style={{ width: `${courseProgress}%` }} />
+                      </div>
+                      <strong>{courseProgress}%</strong>
+                      <small>{courseDone}/{course.lessons.length} aulas</small>
+                    </div>
                   </div>
+
                   <div className="lesson-list">
                     {course.lessons.map((lesson) => {
                       const checked = done[lesson.id];
@@ -459,23 +522,38 @@ function App() {
                       );
                     })}
                   </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-    </main>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }
 
 function Metric({ icon, label, value, helper }: { icon: ReactNode; label: string; value: string; helper: string }) {
   return (
-    <div className="metric-card">
+    <article className="metric-card">
       <div className="metric-icon">{icon}</div>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <p>{helper}</p>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        <p>{helper}</p>
+      </div>
+    </article>
+  );
+}
+
+function PanelTitle({ icon, title, description }: { icon: ReactNode; title: string; description: string }) {
+  return (
+    <div className="panel-title">
+      <div className="panel-icon">{icon}</div>
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+      <ChevronRight className="panel-chevron" size={18} />
     </div>
   );
 }
