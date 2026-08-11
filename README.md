@@ -88,10 +88,15 @@ Ao concluir cada curso, usar o bloco "Metodo Feynman" no painel para escrever:
 
 ## Calendario de Metricas
 
-Registrar diariamente a porcentagem estudada para acompanhar:
+O calendario calcula automaticamente a porcentagem do dia quando aulas sao marcadas como concluidas. Exemplo: se 3 aulas forem marcadas em um dia dentro de uma trilha com 81 aulas, o dia recebe aproximadamente 4%.
+
+Tambem e possivel ajustar manualmente o percentual quando houver estudo fora do checklist, como PDF, laboratorio ou revisao.
+
+Acompanhar:
 
 - Total lancado no mes.
 - Dias estudados.
+- Aulas concluidas no mes.
 - Dias zerados.
 - Media dos dias com estudo.
 

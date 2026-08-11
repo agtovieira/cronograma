@@ -485,7 +485,7 @@ p {
 
 .calendar-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -604,6 +604,34 @@ p {
 
 .daily-entry {
   padding: 18px;
+}
+
+.auto-percent {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.auto-percent span {
+  display: block;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.auto-percent strong {
+  display: block;
+  margin-top: 4px;
+  color: #111827;
+  font-size: 1.7rem;
+}
+
+.auto-percent p {
+  margin-top: 2px;
+  color: #475569;
+  font-size: 0.86rem;
 }
 
 .percent-field,

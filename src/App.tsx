@@ -68,6 +68,7 @@ type Certification = {
 type StudyEntry = {
   percent: number;
   note?: string;
+  completedLessons?: number;
 };
 
 const courses: Course[] = [
@@ -402,12 +403,42 @@ function getMonthLabel(date: Date) {
   }).format(date);
 }
 
-function getMonthStats(entries: Record<string, StudyEntry>, monthDate: Date) {
+function getCompletedLessonsForDate(completionDates: Record<string, string>, dateKey: string) {
+  return Object.values(completionDates).filter((completionDate) => completionDate === dateKey).length;
+}
+
+function getPercentFromLessonCount(completedCount: number, totalLessons: number) {
+  if (totalLessons === 0 || completedCount === 0) return 0;
+  return Math.min(100, Math.round((completedCount / totalLessons) * 100));
+}
+
+function getStudyPercentForDate(
+  entries: Record<string, StudyEntry>,
+  completionDates: Record<string, string>,
+  dateKey: string,
+  totalLessons: number
+) {
+  const automaticPercent = getPercentFromLessonCount(getCompletedLessonsForDate(completionDates, dateKey), totalLessons);
+  return entries[dateKey]?.percent ?? automaticPercent;
+}
+
+function getAutomaticMonthStats(entries: Record<string, StudyEntry>, completionDates: Record<string, string>, monthDate: Date, totalLessons: number) {
   const monthKey = getMonthKey(monthDate);
-  const monthEntries = Object.entries(entries).filter(([key]) => key.startsWith(monthKey));
-  const totalPercent = monthEntries.reduce((total, [, entry]) => total + entry.percent, 0);
-  const studiedDays = monthEntries.filter(([, entry]) => entry.percent > 0).length;
+  const monthDates = new Set<string>();
+
+  Object.keys(entries)
+    .filter((key) => key.startsWith(monthKey))
+    .forEach((key) => monthDates.add(key));
+
+  Object.values(completionDates)
+    .filter((dateKey) => dateKey.startsWith(monthKey))
+    .forEach((dateKey) => monthDates.add(dateKey));
+
+  const percentages = Array.from(monthDates).map((dateKey) => getStudyPercentForDate(entries, completionDates, dateKey, totalLessons));
+  const totalPercent = percentages.reduce((total, percent) => total + percent, 0);
+  const studiedDays = percentages.filter((percent) => percent > 0).length;
   const averagePercent = studiedDays > 0 ? Math.round(totalPercent / studiedDays) : 0;
+  const completedLessons = Object.values(completionDates).filter((dateKey) => dateKey.startsWith(monthKey)).length;
 
   const today = new Date();
   const visibleMonth = monthDate.getMonth();
@@ -424,7 +455,8 @@ function getMonthStats(entries: Record<string, StudyEntry>, monthDate: Date) {
     totalPercent,
     studiedDays,
     noStudyDays,
-    averagePercent
+    averagePercent,
+    completedLessons
   };
 }
 
@@ -445,6 +477,14 @@ function App() {
     try {
       const saved = localStorage.getItem("cronograma-redes-calendar");
       return saved ? (JSON.parse(saved) as Record<string, StudyEntry>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [lessonCompletionDates, setLessonCompletionDates] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem("cronograma-redes-completion-dates");
+      return saved ? (JSON.parse(saved) as Record<string, string>) : {};
     } catch {
       return {};
     }
@@ -473,8 +513,16 @@ function App() {
   const nextLessons = allLessons.filter((lesson) => !done[lesson.id]).slice(0, 5);
   const selectedCertification = certifications.find((certification) => certification.id === activeCertification) ?? certifications[0];
   const calendarDays = useMemo(() => getMonthCalendarDays(visibleMonth), [visibleMonth]);
-  const monthStats = useMemo(() => getMonthStats(studyEntries, visibleMonth), [studyEntries, visibleMonth]);
-  const selectedEntry = studyEntries[selectedDate] ?? { percent: 0, note: "" };
+  const monthStats = useMemo(
+    () => getAutomaticMonthStats(studyEntries, lessonCompletionDates, visibleMonth, allLessons.length),
+    [allLessons.length, lessonCompletionDates, studyEntries, visibleMonth]
+  );
+  const todayKey = getDateKey(new Date());
+  const todayCompletedLessons = getCompletedLessonsForDate(lessonCompletionDates, todayKey);
+  const todayPercent = getStudyPercentForDate(studyEntries, lessonCompletionDates, todayKey, allLessons.length);
+  const selectedCompletedLessons = getCompletedLessonsForDate(lessonCompletionDates, selectedDate);
+  const selectedAutomaticPercent = getPercentFromLessonCount(selectedCompletedLessons, allLessons.length);
+  const selectedEntry = studyEntries[selectedDate] ?? { percent: selectedAutomaticPercent, note: "", completedLessons: selectedCompletedLessons };
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -490,9 +538,43 @@ function App() {
   }, [priority, query]);
 
   function toggleLesson(id: string) {
+    const today = getDateKey(new Date());
+    const nextIsDone = !done[id];
+
     setDone((current) => {
       const next = { ...current, [id]: !current[id] };
       localStorage.setItem("cronograma-redes-status", JSON.stringify(next));
+      return next;
+    });
+
+    setLessonCompletionDates((current) => {
+      const next = { ...current };
+      const previousDate = current[id];
+      const affectedDates = new Set<string>([today]);
+      if (previousDate) affectedDates.add(previousDate);
+
+      if (nextIsDone) {
+        next[id] = today;
+      } else {
+        delete next[id];
+      }
+
+      localStorage.setItem("cronograma-redes-completion-dates", JSON.stringify(next));
+
+      setStudyEntries((entries) => {
+        const nextEntries = { ...entries };
+        affectedDates.forEach((dateKey) => {
+          const completedInDate = getCompletedLessonsForDate(next, dateKey);
+          nextEntries[dateKey] = {
+            ...(entries[dateKey] ?? {}),
+            percent: getPercentFromLessonCount(completedInDate, allLessons.length),
+            completedLessons: completedInDate
+          };
+        });
+        localStorage.setItem("cronograma-redes-calendar", JSON.stringify(nextEntries));
+        return nextEntries;
+      });
+
       return next;
     });
   }
@@ -581,7 +663,7 @@ function App() {
           <Metric icon={<GraduationCap />} label="Aulas mapeadas" value={allLessons.length.toString()} helper={`${courses.length} cursos na trilha`} />
           <Metric icon={<CheckCircle2 />} label="Progresso geral" value={`${progress}%`} helper={`${completed} de ${allLessons.length} concluídas`} />
           <Metric icon={<Clock3 />} label="Foco de hoje" value={todayPlan.day} helper={todayPlan.focus} />
-          <Metric icon={<Target />} label="Hoje registrado" value={`${studyEntries[getDateKey(new Date())]?.percent ?? 0}%`} helper="Lançamento diário de estudo" />
+          <Metric icon={<Target />} label="Hoje registrado" value={`${todayPercent}%`} helper={`${todayCompletedLessons} de ${allLessons.length} aulas marcadas hoje`} />
         </section>
 
         <section className="operations-grid">
@@ -656,6 +738,10 @@ function App() {
               <strong>{monthStats.studiedDays}</strong>
             </div>
             <div>
+              <span>Aulas do mês</span>
+              <strong>{monthStats.completedLessons}</strong>
+            </div>
+            <div>
               <span>Dias zerados</span>
               <strong>{monthStats.noStudyDays}</strong>
             </div>
@@ -675,7 +761,8 @@ function App() {
               <div className="calendar-grid">
                 {calendarDays.map((day) => {
                   const entry = studyEntries[day.key];
-                  const percent = entry?.percent ?? 0;
+                  const completedInDay = getCompletedLessonsForDate(lessonCompletionDates, day.key);
+                  const percent = entry?.percent ?? getPercentFromLessonCount(completedInDay, allLessons.length);
                   const isSelected = day.key === selectedDate;
                   const isToday = day.key === getDateKey(new Date());
                   return (
@@ -695,17 +782,28 @@ function App() {
             </div>
 
             <aside className="daily-entry">
-              <PanelTitle icon={<CalendarDays />} title="Registro do dia" description={new Date(`${selectedDate}T12:00:00`).toLocaleDateString("pt-BR")} />
+              <PanelTitle
+                icon={<CalendarDays />}
+                title="Registro do dia"
+                description={`${new Date(`${selectedDate}T12:00:00`).toLocaleDateString("pt-BR")} • ${selectedCompletedLessons} de ${allLessons.length} aulas`}
+              />
+
+              <div className="auto-percent">
+                <span>Automático pelo checklist</span>
+                <strong>{selectedAutomaticPercent}%</strong>
+                <p>{selectedCompletedLessons} aula(s) concluída(s) neste dia.</p>
+              </div>
 
               <label className="percent-field">
-                <span>Porcentagem estudada</span>
+                <span>Porcentagem do dia</span>
                 <input
                   max={100}
                   min={0}
                   onChange={(event) =>
                     updateStudyEntry(selectedDate, {
                       ...selectedEntry,
-                      percent: clampPercent(event.target.value)
+                      percent: clampPercent(event.target.value),
+                      completedLessons: selectedCompletedLessons
                     })
                   }
                   type="number"
@@ -718,7 +816,7 @@ function App() {
                   <button
                     className={selectedEntry.percent === percent ? "active" : ""}
                     key={percent}
-                    onClick={() => updateStudyEntry(selectedDate, { ...selectedEntry, percent })}
+                    onClick={() => updateStudyEntry(selectedDate, { ...selectedEntry, percent, completedLessons: selectedCompletedLessons })}
                     type="button"
                   >
                     {percent}%
@@ -732,7 +830,8 @@ function App() {
                   onChange={(event) =>
                     updateStudyEntry(selectedDate, {
                       ...selectedEntry,
-                      note: event.target.value
+                      note: event.target.value,
+                      completedLessons: selectedCompletedLessons
                     })
                   }
                   placeholder="Ex: revisei OSI, fiz laboratório de DHCP, não estudei por causa do iFood..."
