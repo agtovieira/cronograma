@@ -4,6 +4,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Circle,
   Clock3,
@@ -62,6 +63,11 @@ type Certification = {
   }>;
   facts: string[];
   focus: string[];
+};
+
+type StudyEntry = {
+  percent: number;
+  note?: string;
 };
 
 const courses: Course[] = [
@@ -294,6 +300,7 @@ const statusLabel: Record<Status, string> = {
 };
 
 const weekdayMap = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const calendarWeekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const feynmanPrompts = [
   "Explique o tema como se estivesse ensinando alguém que nunca viu redes.",
@@ -358,11 +365,90 @@ function getInitialDone() {
   }
 }
 
+function getDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getMonthKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getMonthCalendarDays(monthDate: Date) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const start = new Date(year, month, 1 - firstDay.getDay());
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return {
+      date,
+      key: getDateKey(date),
+      inMonth: date.getMonth() === month
+    };
+  });
+}
+
+function getMonthLabel(date: Date) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric"
+  }).format(date);
+}
+
+function getMonthStats(entries: Record<string, StudyEntry>, monthDate: Date) {
+  const monthKey = getMonthKey(monthDate);
+  const monthEntries = Object.entries(entries).filter(([key]) => key.startsWith(monthKey));
+  const totalPercent = monthEntries.reduce((total, [, entry]) => total + entry.percent, 0);
+  const studiedDays = monthEntries.filter(([, entry]) => entry.percent > 0).length;
+  const averagePercent = studiedDays > 0 ? Math.round(totalPercent / studiedDays) : 0;
+
+  const today = new Date();
+  const visibleMonth = monthDate.getMonth();
+  const visibleYear = monthDate.getFullYear();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const daysInMonth = new Date(visibleYear, visibleMonth + 1, 0).getDate();
+  const isCurrentMonth = visibleMonth === currentMonth && visibleYear === currentYear;
+  const isFutureMonth = visibleYear > currentYear || (visibleYear === currentYear && visibleMonth > currentMonth);
+  const daysConsidered = isFutureMonth ? 0 : isCurrentMonth ? today.getDate() : daysInMonth;
+  const noStudyDays = Math.max(0, daysConsidered - studiedDays);
+
+  return {
+    totalPercent,
+    studiedDays,
+    noStudyDays,
+    averagePercent
+  };
+}
+
+function clampPercent(value: string) {
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return 0;
+  return Math.min(100, Math.max(0, parsed));
+}
+
 function App() {
   const [done, setDone] = useState<Record<string, boolean>>(getInitialDone);
   const [query, setQuery] = useState("");
   const [priority, setPriority] = useState("todos");
   const [activeCertification, setActiveCertification] = useState(certifications[0].id);
+  const [visibleMonth, setVisibleMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(() => getDateKey(new Date()));
+  const [studyEntries, setStudyEntries] = useState<Record<string, StudyEntry>>(() => {
+    try {
+      const saved = localStorage.getItem("cronograma-redes-calendar");
+      return saved ? (JSON.parse(saved) as Record<string, StudyEntry>) : {};
+    } catch {
+      return {};
+    }
+  });
   const [feynmanNotes, setFeynmanNotes] = useState<Record<string, string>>(() => {
     try {
       const saved = localStorage.getItem("cronograma-redes-feynman");
@@ -385,8 +471,10 @@ function App() {
   const todayName = weekdayMap[new Date().getDay()];
   const todayPlan = weeklyPlan.find((plan) => plan.day === todayName) ?? weeklyPlan[0];
   const nextLessons = allLessons.filter((lesson) => !done[lesson.id]).slice(0, 5);
-  const activeCourse = courses.find((course) => course.lessons.some((lesson) => !done[lesson.id])) ?? courses[0];
   const selectedCertification = certifications.find((certification) => certification.id === activeCertification) ?? certifications[0];
+  const calendarDays = useMemo(() => getMonthCalendarDays(visibleMonth), [visibleMonth]);
+  const monthStats = useMemo(() => getMonthStats(studyEntries, visibleMonth), [studyEntries, visibleMonth]);
+  const selectedEntry = studyEntries[selectedDate] ?? { percent: 0, note: "" };
 
   const filteredCourses = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -417,6 +505,18 @@ function App() {
     });
   }
 
+  function changeMonth(direction: -1 | 1) {
+    setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + direction, 1));
+  }
+
+  function updateStudyEntry(dateKey: string, entry: StudyEntry) {
+    setStudyEntries((current) => {
+      const next = { ...current, [dateKey]: entry };
+      localStorage.setItem("cronograma-redes-calendar", JSON.stringify(next));
+      return next;
+    });
+  }
+
   return (
     <div className="workspace">
       <aside className="sidebar">
@@ -436,6 +536,10 @@ function App() {
           <a href="#hoje">
             <CalendarDays size={18} />
             Hoje
+          </a>
+          <a href="#calendario">
+            <BarChart3 size={18} />
+            Calendário
           </a>
           <a href="#cursos">
             <BookOpen size={18} />
@@ -477,7 +581,7 @@ function App() {
           <Metric icon={<GraduationCap />} label="Aulas mapeadas" value={allLessons.length.toString()} helper={`${courses.length} cursos na trilha`} />
           <Metric icon={<CheckCircle2 />} label="Progresso geral" value={`${progress}%`} helper={`${completed} de ${allLessons.length} concluídas`} />
           <Metric icon={<Clock3 />} label="Foco de hoje" value={todayPlan.day} helper={todayPlan.focus} />
-          <Metric icon={<Target />} label="Curso atual" value={activeCourse.block} helper={activeCourse.title} />
+          <Metric icon={<Target />} label="Hoje registrado" value={`${studyEntries[getDateKey(new Date())]?.percent ?? 0}%`} helper="Lançamento diário de estudo" />
         </section>
 
         <section className="operations-grid">
@@ -521,6 +625,122 @@ function App() {
             </div>
           </article>
 
+        </section>
+
+        <section className="study-calendar-section" id="calendario">
+          <div className="section-toolbar">
+            <div>
+              <span className="eyebrow">Métricas diárias</span>
+              <h2>Calendário de evolução</h2>
+              <p>Registre a porcentagem feita em cada dia para acompanhar consistência, dias zerados e média de estudo.</p>
+            </div>
+
+            <div className="month-controls" aria-label="Controle de mês">
+              <button onClick={() => changeMonth(-1)} type="button">
+                <ChevronLeft size={18} />
+              </button>
+              <strong>{getMonthLabel(visibleMonth)}</strong>
+              <button onClick={() => changeMonth(1)} type="button">
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div className="calendar-metrics">
+            <div>
+              <span>Total lançado</span>
+              <strong>{monthStats.totalPercent}%</strong>
+            </div>
+            <div>
+              <span>Dias estudados</span>
+              <strong>{monthStats.studiedDays}</strong>
+            </div>
+            <div>
+              <span>Dias zerados</span>
+              <strong>{monthStats.noStudyDays}</strong>
+            </div>
+            <div>
+              <span>Média estudada</span>
+              <strong>{monthStats.averagePercent}%</strong>
+            </div>
+          </div>
+
+          <div className="calendar-workspace">
+            <div className="calendar-card">
+              <div className="calendar-weekdays">
+                {calendarWeekdays.map((weekday) => (
+                  <span key={weekday}>{weekday}</span>
+                ))}
+              </div>
+              <div className="calendar-grid">
+                {calendarDays.map((day) => {
+                  const entry = studyEntries[day.key];
+                  const percent = entry?.percent ?? 0;
+                  const isSelected = day.key === selectedDate;
+                  const isToday = day.key === getDateKey(new Date());
+                  return (
+                    <button
+                      className={`${day.inMonth ? "" : "muted"} ${isSelected ? "selected" : ""} ${isToday ? "today" : ""}`}
+                      key={day.key}
+                      onClick={() => setSelectedDate(day.key)}
+                      type="button"
+                    >
+                      <span>{day.date.getDate()}</span>
+                      <strong>{percent}%</strong>
+                      <i style={{ width: `${percent}%` }} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <aside className="daily-entry">
+              <PanelTitle icon={<CalendarDays />} title="Registro do dia" description={new Date(`${selectedDate}T12:00:00`).toLocaleDateString("pt-BR")} />
+
+              <label className="percent-field">
+                <span>Porcentagem estudada</span>
+                <input
+                  max={100}
+                  min={0}
+                  onChange={(event) =>
+                    updateStudyEntry(selectedDate, {
+                      ...selectedEntry,
+                      percent: clampPercent(event.target.value)
+                    })
+                  }
+                  type="number"
+                  value={selectedEntry.percent}
+                />
+              </label>
+
+              <div className="quick-percent">
+                {[0, 1, 5, 10, 25, 50].map((percent) => (
+                  <button
+                    className={selectedEntry.percent === percent ? "active" : ""}
+                    key={percent}
+                    onClick={() => updateStudyEntry(selectedDate, { ...selectedEntry, percent })}
+                    type="button"
+                  >
+                    {percent}%
+                  </button>
+                ))}
+              </div>
+
+              <label className="note-field">
+                <span>Observação</span>
+                <textarea
+                  onChange={(event) =>
+                    updateStudyEntry(selectedDate, {
+                      ...selectedEntry,
+                      note: event.target.value
+                    })
+                  }
+                  placeholder="Ex: revisei OSI, fiz laboratório de DHCP, não estudei por causa do iFood..."
+                  value={selectedEntry.note ?? ""}
+                />
+              </label>
+            </aside>
+          </div>
         </section>
 
         <section className="certifications-section" id="certificacoes">

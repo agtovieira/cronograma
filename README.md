@@ -86,6 +86,15 @@ Ao concluir cada curso, usar o bloco "Metodo Feynman" no painel para escrever:
 - Exemplo pratico, comando ou cenario real que comprova entendimento.
 - Pergunta que usaria para testar outra pessoa.
 
+## Calendario de Metricas
+
+Registrar diariamente a porcentagem estudada para acompanhar:
+
+- Total lancado no mes.
+- Dias estudados.
+- Dias zerados.
+- Media dos dias com estudo.
+
 ## Meta de Certificacao
 
 Foco de medio prazo:
