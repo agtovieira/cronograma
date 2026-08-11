@@ -37,13 +37,20 @@ npm run build
 
 ## Deploy na EasyPanel
 
-Aplicacao pronta para deploy como app Node/Vite ou via Dockerfile.
+Aplicacao pronta para deploy via Dockerfile com autenticacao Basic Auth.
 
 - Dominio planejado: `cronograma.nodeia.tech`
 - IP informado da EasyPanel: `179.198.104.168`
-- Build command: `npm run build`
-- Output: `dist`
 - Porta do container Docker: `80`
+
+Variaveis de ambiente obrigatorias na EasyPanel:
+
+```bash
+BASIC_AUTH_USER=augusto
+BASIC_AUTH_PASSWORD=defina-a-senha-na-easypanel
+```
+
+Nao grave a senha real no GitHub. Configure somente nas variaveis de ambiente da EasyPanel.
 
 ## Trilhas identificadas nas capturas
 
