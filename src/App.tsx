@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   BookOpen,
@@ -82,12 +82,12 @@ const courses: Course[] = [
     lessons: [
       { id: "036-01", name: "01 - CONVERSA INICIAL", status: "concluido" },
       { id: "036-02", name: "02 - POR ONDE COMEÇAR", status: "concluido" },
-      { id: "036-03", name: "03 - COMO FAZER UM CRONOGRAMA DE ESTUDOS", status: "estudando" },
-      { id: "036-04", name: "CRONOGRAMA DE ESTUDOS", status: "estudando" },
-      { id: "036-05", name: "04 - TÉCNICAS DE ESTUDO" },
-      { id: "036-06", name: "05 - REVISÃO OSI TCP/IP" },
-      { id: "036-07", name: "06 - REVISÃO DE IP E NETMASK" },
-      { id: "036-08", name: "Pesquisa Como Estudar Redes do Zero" }
+      { id: "036-03", name: "03 - COMO FAZER UM CRONOGRAMA DE ESTUDOS", status: "concluido" },
+      { id: "036-04", name: "CRONOGRAMA DE ESTUDOS", status: "concluido" },
+      { id: "036-05", name: "04 - TÉCNICAS DE ESTUDO", status: "concluido" },
+      { id: "036-06", name: "05 - REVISÃO OSI TCP/IP", status: "concluido" },
+      { id: "036-07", name: "06 - REVISÃO DE IP E NETMASK", status: "concluido" },
+      { id: "036-08", name: "Pesquisa Como Estudar Redes do Zero", status: "concluido" }
     ]
   },
   {
@@ -310,6 +310,11 @@ const feynmanPrompts = [
   "Qual pergunta você faria para testar se outra pessoa também entendeu?"
 ];
 
+const firstCourseLessonSplit = {
+  "2026-08-11": ["036-01", "036-02", "036-03", "036-04"],
+  "2026-08-12": ["036-05", "036-06", "036-07", "036-08"]
+};
+
 const certifications: Certification[] = [
   {
     id: "mtcna",
@@ -466,6 +471,15 @@ function clampPercent(value: string) {
   return Math.min(100, Math.max(0, parsed));
 }
 
+function shouldKeepStudyEntry(entry: StudyEntry | undefined) {
+  if (!entry) return false;
+  return entry.percent > 0 || Boolean(entry.note?.trim()) || Boolean(entry.completedLessons && entry.completedLessons > 0);
+}
+
+function cleanupStudyEntries(entries: Record<string, StudyEntry>) {
+  return Object.fromEntries(Object.entries(entries).filter(([, entry]) => shouldKeepStudyEntry(entry)));
+}
+
 function App() {
   const [done, setDone] = useState<Record<string, boolean>>(getInitialDone);
   const [query, setQuery] = useState("");
@@ -497,6 +511,51 @@ function App() {
       return {};
     }
   });
+
+  useEffect(() => {
+    const migrationKey = "cronograma-redes-migration-first-course-split-v1";
+    if (localStorage.getItem(migrationKey)) return;
+
+    const firstCourseLessonIds = Object.values(firstCourseLessonSplit).flat();
+
+    setDone((current) => {
+      const next = { ...current };
+      firstCourseLessonIds.forEach((lessonId) => {
+        next[lessonId] = true;
+      });
+      localStorage.setItem("cronograma-redes-status", JSON.stringify(next));
+      return next;
+    });
+
+    setLessonCompletionDates((current) => {
+      const next = { ...current };
+      Object.entries(firstCourseLessonSplit).forEach(([dateKey, lessonIds]) => {
+        lessonIds.forEach((lessonId) => {
+          next[lessonId] = dateKey;
+        });
+      });
+      localStorage.setItem("cronograma-redes-completion-dates", JSON.stringify(next));
+      return next;
+    });
+
+    setStudyEntries((current) => {
+      const next = cleanupStudyEntries(current);
+      next["2026-08-11"] = {
+        ...(next["2026-08-11"] ?? {}),
+        percent: 5,
+        completedLessons: 4
+      };
+      next["2026-08-12"] = {
+        ...(next["2026-08-12"] ?? {}),
+        percent: 5,
+        completedLessons: 4
+      };
+      localStorage.setItem("cronograma-redes-calendar", JSON.stringify(next));
+      return next;
+    });
+
+    localStorage.setItem(migrationKey, "done");
+  }, []);
 
   const allLessons: LessonWithCourse[] = courses.flatMap((course) =>
     course.lessons.map((lesson) => ({
@@ -565,11 +624,16 @@ function App() {
         const nextEntries = { ...entries };
         affectedDates.forEach((dateKey) => {
           const completedInDate = getCompletedLessonsForDate(next, dateKey);
-          nextEntries[dateKey] = {
+          const updatedEntry = {
             ...(entries[dateKey] ?? {}),
             percent: getPercentFromLessonCount(completedInDate, allLessons.length),
             completedLessons: completedInDate
           };
+          if (shouldKeepStudyEntry(updatedEntry)) {
+            nextEntries[dateKey] = updatedEntry;
+          } else {
+            delete nextEntries[dateKey];
+          }
         });
         localStorage.setItem("cronograma-redes-calendar", JSON.stringify(nextEntries));
         return nextEntries;
@@ -593,7 +657,12 @@ function App() {
 
   function updateStudyEntry(dateKey: string, entry: StudyEntry) {
     setStudyEntries((current) => {
-      const next = { ...current, [dateKey]: entry };
+      const next = { ...current };
+      if (shouldKeepStudyEntry(entry)) {
+        next[dateKey] = entry;
+      } else {
+        delete next[dateKey];
+      }
       localStorage.setItem("cronograma-redes-calendar", JSON.stringify(next));
       return next;
     });
@@ -663,7 +732,12 @@ function App() {
           <Metric icon={<GraduationCap />} label="Aulas mapeadas" value={allLessons.length.toString()} helper={`${courses.length} cursos na trilha`} />
           <Metric icon={<CheckCircle2 />} label="Progresso geral" value={`${progress}%`} helper={`${completed} de ${allLessons.length} concluídas`} />
           <Metric icon={<Clock3 />} label="Foco de hoje" value={todayPlan.day} helper={todayPlan.focus} />
-          <Metric icon={<Target />} label="Hoje registrado" value={`${todayPercent}%`} helper={`${todayCompletedLessons} de ${allLessons.length} aulas marcadas hoje`} />
+          <Metric
+            icon={<Target />}
+            label="Hoje registrado"
+            value={todayPercent > 0 ? `${todayPercent}%` : "Sem registro"}
+            helper={`${todayCompletedLessons} de ${allLessons.length} aulas marcadas hoje`}
+          />
         </section>
 
         <section className="operations-grid">
@@ -763,6 +837,7 @@ function App() {
                   const entry = studyEntries[day.key];
                   const completedInDay = getCompletedLessonsForDate(lessonCompletionDates, day.key);
                   const percent = entry?.percent ?? getPercentFromLessonCount(completedInDay, allLessons.length);
+                  const hasStudy = percent > 0;
                   const isSelected = day.key === selectedDate;
                   const isToday = day.key === getDateKey(new Date());
                   return (
@@ -773,8 +848,8 @@ function App() {
                       type="button"
                     >
                       <span>{day.date.getDate()}</span>
-                      <strong>{percent}%</strong>
-                      <i style={{ width: `${percent}%` }} />
+                      <strong>{hasStudy ? `${percent}%` : ""}</strong>
+                      {hasStudy ? <i style={{ width: `${percent}%` }} /> : null}
                     </button>
                   );
                 })}

@@ -92,6 +92,12 @@ O calendario calcula automaticamente a porcentagem do dia quando aulas sao marca
 
 Tambem e possivel ajustar manualmente o percentual quando houver estudo fora do checklist, como PDF, laboratorio ou revisao.
 
+Regra aplicada ao primeiro curso concluido:
+
+- `2026-08-11`: 5%.
+- `2026-08-12`: 5%.
+- Dias sem estudo nao exibem `0%` no calendario.
+
 Acompanhar:
 
 - Total lancado no mes.
